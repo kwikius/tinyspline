@@ -40,46 +40,21 @@ to our knot is replaced by the next one and so forth:
 
 Similarly, we can shift the knot array:
 
-[0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4, 5, 6, 7, 8, 9, 9, 9, 9] // 4 needs to be merged
+[0, 0, 0, 0, 1, 2, 3, 4, 4, 4, *4, 5, 6, 7, 8, 9, 9, 9, 9] // 4 needs to be merged
 [0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 9, 9, 9] // fixed
 
 This step can be done before performing the actual derivation.
 
-*/
-
-// find multiplicity of a knot
-static tsError get_knot_multiplicity(tsBSpline* spline,size_t knot_idx, size_t * result)
+static tsError remove_knot(tsBSpline* spline_in,size_t knot_index,tsBSpline* spline_out )
 {
-     assert(spline != NULL);
-     assert(result != NULL);
-     assert(knot_idx < spline->n_knots);
+   make a knot vector of size one less than spline and copy all < knot_index and all > knot_index to it
+   assert( spline_in != spline_out);
 
-     tsDeBoorNet net;
-     const tsError e = ts_bspline_evaluate(spline,spline->knots[knot_idx],&net);
-     if ( e == TS_SUCCESS){
-        *result = net.s;
-     }
-     return e;
+   
+
 }
 
-/*
-   get the 2 ? control points corresponding to a knot at index knot_idx in the spline
-   last in series of same value
-   the multiplicity of idx must  be equal to the order of the spline
 */
-static tsError get_corresponding_control_points(
-      tsBSpline* spline,
-      size_t multiplicity,
-      size_t knot_idx,
-      
-      tsReal const ** result_ctrlpa, 
-      tsReal const ** result_ctrlpb)
-{
-    const size_t dim = spline->dim;
-
-
-    return TS_SUCCESS;
-}
 
 /********************************************************
 *                                                       *
@@ -88,6 +63,8 @@ static tsError get_corresponding_control_points(
 ********************************************************/
 void setup()
 {
+
+   printf ("interpolated spline derivative test with control point cleaning\n\n");
 	tsReal points[15];
 	points[0] = 1;
 	points[1] = -1;
@@ -107,46 +84,102 @@ void setup()
 
 	ts_bspline_interpolate_cubic(points, 5, 3, &spline);
 
-   const size_t n_knots = spline.n_knots;
-   const size_t deg = spline.deg;
+   printf("original spline:\n");
+   ts_bspline_print(&spline);
+
+   printf("\nchecking spline for derivative issues\n");
+
+  // const size_t n_knots = spline.n_knots;
+   const size_t order = spline.order;
    const size_t dim = spline.dim;
+   const tsReal min_useful_distance = (tsReal)1.e-6;// ? for now
+
    size_t knot_idx = 0U;
-   while( knot_idx < n_knots ){
-      size_t multiplicity = 0U;
-      tsError e = get_knot_multiplicity(&spline,knot_idx,&multiplicity);
-      assert ( e == TS_SUCCESS);
-      const size_t order = deg + 1;
+   
+   // n.b that number of  knots and control points will change dynamically in the loop
+   while(knot_idx < spline.n_knots){
+
+      // count the multiplicity of the knot
+      size_t multiplicity = 1U;
+      const tsReal cur_knot_value = spline.knots[knot_idx];
+      while ( (knot_idx < (spline.n_knots-1)) && ( spline.knots[knot_idx +1] == cur_knot_value) ){
+         ++knot_idx;
+         ++multiplicity;
+      }
       if ( multiplicity == order){
-         tsReal const knot_value = spline.knots[knot_idx];
-         // advance to last occurrence
-         while ( knot_idx < (n_knots-1) ){
-            if ( spline.knots[knot_idx +1] == knot_value){
-               printf("advance %f \n", knot_value);
-               ++knot_idx;
-            }else{
-               break;
-            }
-         }
          const size_t idxa = (knot_idx - multiplicity) * dim;
          const size_t idxb = idxa + dim;
-
          // get and compare the control points
-         tsReal const * ctrl_pointsa = &spline.ctrlp[idxa];
-         tsReal const * ctrl_pointsb = &spline.ctrlp[idxb];
-         const tsReal min_useful_distance = (tsReal)1.e-6;// ? for now
+         const tsReal* ctrl_pointsa = &spline.ctrlp[idxa];
+         const tsReal* ctrl_pointsb = &spline.ctrlp[idxb];
+     
          if (ts_ctrlp_dist2(ctrl_pointsa,ctrl_pointsb, dim) < min_useful_distance){
-            printf("problem knot at %u, value %f:\n",(unsigned int)knot_idx,spline.knots[knot_idx]) ;
+
+            printf("found problem knot at index %u, removing...\n\n",(unsigned int)knot_idx) ;
+
+            // create and init a temporary spline for the mods
+            tsBSpline mod_spline;
+            {
+               mod_spline.deg = spline.deg;
+               mod_spline.order = spline.order;
+               mod_spline.dim = spline.dim;
+               mod_spline.n_ctrlp = spline.n_ctrlp-1U;
+               mod_spline.n_knots = spline.n_knots-1U;
+               const size_t n_raw_bytes_for_real_array = sizeof(tsReal) *  (mod_spline.n_knots + mod_spline.n_ctrlp * mod_spline.dim);
+               mod_spline.ctrlp = (tsReal*) malloc(n_raw_bytes_for_real_array);
+               // TODO check malloc result
+               mod_spline.knots = mod_spline.ctrlp + mod_spline.n_ctrlp * mod_spline.dim;
+            }
+            // copy control points prior to and including first control point coresponding to current knot
+            const tsReal* ctrlp_src = spline.ctrlp;
+            tsReal* ctrlp_dest = mod_spline.ctrlp;
+
+            size_t reals_copied = 0U;
+
+            while ( ctrlp_src != ctrl_pointsb){
+               *ctrlp_dest++ = *ctrlp_src++;
+                ++reals_copied;
+            }
+            // skip copying 2nd control point coresponding to current knot
+            ctrlp_src +=  mod_spline.dim;
+            // copy the rest of the control points over
+            while ( reals_copied < (mod_spline.n_ctrlp * mod_spline.dim) ){
+                *ctrlp_dest++ = *ctrlp_src++;
+                ++reals_copied;
+            }
+            // copy all knots before current
+            const tsReal* knots_src = spline.knots;
+            tsReal* knots_dest = mod_spline.knots;
+            size_t idx = 0U;
+            while ( idx < knot_idx){
+               knots_dest[idx] = knots_src[idx];
+               ++idx;
+            }
+            // copy all knots after current
+            while (idx < mod_spline.n_knots){
+               knots_dest[idx] = knots_src[idx + 1];
+               ++idx;
+            } 
+            // clear the original spline and replace the contents with the new one  
+            ts_bspline_free(&spline);
+            ts_bspline_move(&mod_spline,&spline);
+            
+            printf("... spline after problem knot removed:\n");
+            ts_bspline_print(&spline);
          }
+      }else{
+         // nothing to do
+         ++knot_idx;
       }
-      ++knot_idx;
    }
 
-//########################################
-   //N.B Will assert here until this is sorted
-  // assert (ts_bspline_derive(&spline,&deriv) == TS_SUCCESS);
-//##########################################
-	ts_bspline_print(&spline);
-  // ts_bspline_print(&deriv);
+   printf("spline cleaned:\n\n");
+
+   assert (ts_bspline_derive(&spline,&deriv) == TS_SUCCESS);
+
+   printf("show spline derivative:\n");
+	//ts_bspline_print(&spline);
+   ts_bspline_print(&deriv);
 }
 
 void tear_down()
