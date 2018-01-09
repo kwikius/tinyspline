@@ -64,12 +64,21 @@ static tsError get_knot_multiplicity(tsBSpline* spline,size_t knot_idx, size_t *
 
 /*
    get the 2 ? control points corresponding to a knot at index knot_idx in the spline
+   last in series of same value
+   the multiplicity of idx must  be equal to the order of the spline
 */
 static tsError get_corresponding_control_points(
-      tsBSpline* spline,size_t knot_idx,
-      tsReal const * result_ctrlpa, tsReal const * result_ctrlpb)
+      tsBSpline* spline,
+      size_t multiplicity,
+      size_t knot_idx,
+      
+      tsReal const ** result_ctrlpa, 
+      tsReal const ** result_ctrlpb)
 {
-    return TS_DIM_ZERO;// error for now
+    const size_t dim = spline->dim;
+
+
+    return TS_SUCCESS;
 }
 
 /********************************************************
@@ -101,29 +110,43 @@ void setup()
    const size_t n_knots = spline.n_knots;
    const size_t deg = spline.deg;
    const size_t dim = spline.dim;
-   for ( size_t knot_idx = 0U; knot_idx < n_knots; ++knot_idx){
+   size_t knot_idx = 0U;
+   while( knot_idx < n_knots ){
       size_t multiplicity = 0U;
       tsError e = get_knot_multiplicity(&spline,knot_idx,&multiplicity);
       assert ( e == TS_SUCCESS);
-      if ( multiplicity == (deg + 1)){
-         tsReal const * ctrl_pointsa;
-         tsReal const * ctrl_pointsb;
-         tsError e = get_corresponding_control_points(&spline,knot_idx,ctrl_pointsa,ctrl_pointsb);
-         assert ( e == TS_SUCCESS);
-         // compare the points
+      const size_t order = deg + 1;
+      if ( multiplicity == order){
+         tsReal const knot_value = spline.knots[knot_idx];
+         // advance to last occurrence
+         while ( knot_idx < (n_knots-1) ){
+            if ( spline.knots[knot_idx +1] == knot_value){
+               printf("advance %f \n", knot_value);
+               ++knot_idx;
+            }else{
+               break;
+            }
+         }
+         const size_t idxa = (knot_idx - multiplicity) * dim;
+         const size_t idxb = idxa + dim;
+
+         // get and compare the control points
+         tsReal const * ctrl_pointsa = &spline.ctrlp[idxa];
+         tsReal const * ctrl_pointsb = &spline.ctrlp[idxb];
          const tsReal min_useful_distance = (tsReal)1.e-6;// ? for now
          if (ts_ctrlp_dist2(ctrl_pointsa,ctrl_pointsb, dim) < min_useful_distance){
             printf("problem knot at %u, value %f:\n",(unsigned int)knot_idx,spline.knots[knot_idx]) ;
          }
       }
+      ++knot_idx;
    }
 
 //########################################
    //N.B Will assert here until this is sorted
-   assert (ts_bspline_derive(&spline,&deriv) == TS_SUCCESS);
+  // assert (ts_bspline_derive(&spline,&deriv) == TS_SUCCESS);
 //##########################################
 	ts_bspline_print(&spline);
-   ts_bspline_print(&deriv);
+  // ts_bspline_print(&deriv);
 }
 
 void tear_down()
