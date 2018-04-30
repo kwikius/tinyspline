@@ -1,6 +1,6 @@
 #include "tinyspline.h"
 
-#ifdef TINYSPLINE_DOUBLE_PRECISION
+#ifndef TINYSPLINE_FLOAT_PRECISION
 #error OpenGL requires tinyspline library to be complied for floats
 #endif
 
