@@ -1,22 +1,5 @@
 #include "tinyspline.h"
 #include <stdlib.h>
-//#if defined(__APPLE__)
-//#include <OpenGL/gl.h>
-//#include <OpenGL/glu.h>
-//#include <GLUT/glut.h>
-//#else
-//#ifdef _WIN32
-//#define WIN32_LEAN_AND_MEAN
-//#include <windows.h> 
-//#endif
-//#include <GL/gl.h>
-//#include <GL/glu.h>
-//#include <GL/glut.h>
-//#endif
-
-//#include <stdio.h>
-//#include <debugging.h>
-//#include <assert.h>
 
 /*
   clean a spline created by ts_bspline_interpolate_cubic

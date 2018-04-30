@@ -1,4 +1,6 @@
 #include "tinyspline.h"
+#include <quan/three_d/vect.hpp>
+#include <vector>
 
 #ifdef TINYSPLINE_DOUBLE_PRECISION
 #error OpenGL requires tinyspline library to be complied for floats
@@ -28,7 +30,7 @@
    In fact with a spline of 5 points, the curve isnt a great fit except hopefully at interpolated points
 */
 
-tsError ts_bspline_clean(tsBSpline * spline);
+extern "C" tsError ts_bspline_clean(tsBSpline * spline);
 
 /********************************************************
 *                                                       *
@@ -78,37 +80,73 @@ static void unit_vector(const tsReal* x, const tsReal * y, tsReal* resultx, tsRe
    *resulty = *y / mag;
 }
 
+tsReal* create_spline(std::vector<quan::three_d::vect<double> > const & points_in)
+{
+   std:;size_t const size = points_in.size();
+   std::size_t const length = 3 * size;
+   tsReal* arr = new tsReal [length];
+   
+   for (size_t i = 0U; i < size; ++i){
+      quan::three_d::vect<double> const &  vect = points_in[i];
+      arr[3 * i] = vect.x;
+      arr[3 * i + 1U] = vect.y;
+      arr[3 * i +2] = vect.z;
+   }
+   return arr;
+}
+
+
 void setup()
 {
    printf ("spar test\n\n");
 
-	tsReal points[15];
-	points[0] = 1;
-	points[1] = -1;
-	points[2] = 0;
-	points[3] = -1;
-	points[4] = 2;
-	points[5] = 0;
-	points[6] = 1;
-	points[7] = 4;
-	points[8] = 0;
-	points[9] = 4;
-	points[10] = 3;
-	points[11] = 0;
-	points[12] = 7;
-	points[13] = 5;
-	points[14] = 0;
+   constexpr size_t dimension = 3U;
+   
+   std::vector<quan::three_d::vect<double> > vect =
+   {
+      {1,-1,0}
+      ,{-1,2,0}
+      ,{1,4,0}
+      ,{4,3,0}
+      ,{7,5,0}
+      ,{8,6,0}
+   };
 
-	assert(ts_bspline_interpolate_cubic(points, 5, 3, &spline_orig)== TS_SUCCESS);
+   const size_t num_points = vect.size(); 
+
+   tsReal * points = create_spline(vect);
+
+//	tsReal points[num_points * dimension];
+//	points[0] = 1;
+//	points[1] = -1;
+//	points[2] = 0;
+
+//	points[3] = -1;
+//	points[4] = 2;
+//	points[5] = 0;
+
+//	points[6] = 1;
+//	points[7] = 4;
+//	points[8] = 0;
+
+//	points[9] = 4;
+//	points[10] = 3;
+//	points[11] = 0;
+
+//	points[12] = 7;
+//	points[13] = 5;
+//	points[14] = 0;
+
+	assert(ts_bspline_interpolate_cubic(points, num_points, dimension, &spline_orig)== TS_SUCCESS);
   // ts_bspline_print(&spline_orig);
    assert(ts_bspline_copy(&spline_orig,&spline_copy)== TS_SUCCESS);
    assert(ts_bspline_clean(&spline_copy) == TS_SUCCESS);
    assert(ts_bspline_derive(&spline_copy,&deriv) == TS_SUCCESS);
 
    // create the spar 
-   const size_t num_segments = sizeof(points) / (3 * sizeof(points[0])) - 1U;
+  // const size_t num_segments = sizeof(points) / (3 * sizeof(points[0])) - 1U;
 
-   assert(num_segments == 4U);
+   const size_t num_segments = num_points -1U;
    
    for( size_t i = 0U; i <= num_segments; ++i){
       tsReal u = (tsReal)i / num_segments; // 0 < 0 ; num_segments / num_segments -> 1
@@ -135,7 +173,7 @@ void setup()
       
       perp(&dx,&dy,&dx,&dy);
       unit_vector(&dx,&dy,&dx,&dy);
-      const tsReal spar_width = 0.2;
+      const tsReal spar_width = 0.05;
       multiply_vector(&dx,&dy,spar_width,&dx,&dy);
 
       points[3 * i] = px + dx;
