@@ -35,27 +35,32 @@ tsReal w = 0.001f;
 ********************************************************/
 void setup()
 {
+	tsReal *ctrlp;
+
 	ts_bspline_new(
 		3,      /* number of control points */
 		4,      /* dimension of each point */
 		2,      /* degree of spline */
 		TS_CLAMPED, /* used to hit first and last control point */
-		&spline /* the spline to setup */
-	);
+		&spline, /* the spline to setup */
+		NULL);
 	
 	/* Setup control points. */
-	spline.ctrlp[0] = -1.0f;
-	spline.ctrlp[1] = 1.0f;
-	spline.ctrlp[2] = 0.0f;
-	spline.ctrlp[3] = 1.0f;
+	ts_bspline_control_points(&spline, &ctrlp, NULL);
+	ctrlp[0] = -1.0f;
+	ctrlp[1] =  1.0f;
+	ctrlp[2] =  0.0f;
+	ctrlp[3] =  1.0f;
 
 	/* ignore second control point here since it is
 	updated in ::display anyway */
 
-	spline.ctrlp[8] = 1.0f;
-	spline.ctrlp[9] = -1.0f;
-	spline.ctrlp[10] = 0.0f;
-	spline.ctrlp[11] = 1.0f;
+	ctrlp[8]  =  1.0f;
+	ctrlp[9]  = -1.0f;
+	ctrlp[10] =  0.0f;
+	ctrlp[11] =  1.0f;
+	ts_bspline_set_control_points(&spline, ctrlp, NULL);
+	free(ctrlp);
 }
 
 void tear_down()
@@ -75,16 +80,21 @@ void displayText( float x, float y, float r, float g, float b, const char *strin
 
 void display(void)
 {
+	tsReal *ctrlp, *knots;
+	ts_bspline_control_points(&spline, &ctrlp, NULL);
+	ts_bspline_knots(&spline, &knots, NULL);
+
 	char buffer[256];
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/* weight the first three components with `w` and store `w`
 	in the forth component of the control point---that's how
 	homogeneous coordinates work */
-	spline.ctrlp[4] = B[0] * w;
-	spline.ctrlp[5] = B[1] * w;
-	spline.ctrlp[6] = B[2] * w;
-	spline.ctrlp[7] = w;
+	ctrlp[4] = B[0] * w;
+	ctrlp[5] = B[1] * w;
+	ctrlp[6] = B[2] * w;
+	ctrlp[7] = w;
+	ts_bspline_set_control_points(&spline, ctrlp, NULL);
 	
 	/* draw spline */
 	glColor3f(1.0, 1.0, 1.0);
@@ -92,11 +102,11 @@ void display(void)
 	gluBeginCurve(theNurb);
 		gluNurbsCurve(
 			theNurb, 
-			(GLint)spline.n_knots,
-			spline.knots,
-			(GLint)spline.dim,
-			spline.ctrlp,
-			(GLint)spline.order,
+			(GLint)ts_bspline_num_knots(&spline),
+			knots,
+			(GLint)ts_bspline_dimension(&spline),
+			ctrlp,
+			(GLint)ts_bspline_order(&spline),
 			GL_MAP1_VERTEX_4
 		);
 	gluEndCurve(theNurb);
@@ -105,9 +115,9 @@ void display(void)
 	glColor3f(1.0, 0.0, 0.0);
 	glPointSize(5.0);
 	glBegin(GL_POINTS);
-		 glVertex3fv(spline.ctrlp);
+		 glVertex3fv(ctrlp);
 		 glVertex3fv(B);
-		 glVertex3fv(spline.ctrlp + 8);
+		 glVertex3fv(ctrlp + 8);
 	glEnd();
 
 	/* display w */
@@ -116,6 +126,9 @@ void display(void)
 	
 	glutSwapBuffers();
 	glutPostRedisplay();
+	
+	free(ctrlp);
+	free(knots);
 
 	w *= 1.05f; /* non-linear update of `w` */
 	if (w > 100.f) {
@@ -159,7 +172,7 @@ void reshape(int w, int h)
    gluPerspective (45.0, (GLdouble)w/(GLdouble)h, 3.0, 8.0);
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
-   glTranslatef (0.0, 0.0, -5.0);
+   glTranslatef (0.0f, 0.0f, -5.0f);
 }
 
 int main(int argc, char** argv)

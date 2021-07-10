@@ -1,4 +1,4 @@
-local ts = require("tinysplinelua")
+local ts = require("tinyspline")
 
 -- Create a cubic spline with 7 control points in 2D using
 -- a clamped knot vector. This call is equivalent to:
@@ -6,7 +6,7 @@ local ts = require("tinysplinelua")
 spline = ts.BSpline(7)
 
 -- Setup control points.
-ctrlp = spline.ctrlp
+ctrlp = spline.control_points
 ctrlp[1]  = -1.75 -- x0
 ctrlp[2]  = -1.0  -- y0
 ctrlp[3]  = -1.5  -- x1
@@ -21,15 +21,15 @@ ctrlp[11] =  0.0  -- x5
 ctrlp[12] =  0.5  -- y5
 ctrlp[13] =  0.5  -- x6
 ctrlp[14] =  0.0  -- y6
-spline.ctrlp = ctrlp
+spline.control_points = ctrlp
 
--- Evaluate `spline` at u = 0.4 using 'evaluate'.
-result = spline:evaluate(0.4).result
+-- Evaluate `spline` at u = 0.4 using 'eval'.
+result = spline:eval(0.4).result
 print("x = ", result[1], "y = ", result[2]);
 
 -- Derive `spline` and subdivide it into a sequence of Bezier curves.
-beziers = spline:derive():toBeziers()
+beziers = spline:derive():to_beziers()
 
--- Evaluate `beziers` at u = 0.3 using '()' instead of 'evaluate'.
+-- Evaluate `beziers` at u = 0.3 using '()' instead of 'eval'.
 result = beziers(0.3).result
 print("x = ", result[1], "y = ", result[2]);

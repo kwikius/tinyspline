@@ -14,6 +14,7 @@
 #include <GL/glut.h>
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
 
 tsBSpline spline;
@@ -27,36 +28,41 @@ int drawBeziers = 0; /* 0 - bspline, 1 - beziers */
 ********************************************************/
 void setup()
 {
+	tsReal *ctrlp;
+
 	ts_bspline_new(
 		7,      /* number of control points */
 		3,      /* dimension of each point */
 		3,      /* degree of spline */
 		TS_CLAMPED, /* used to hit first and last control point */
-		&spline /* the spline to setup */
-	);
+		&spline, /* the spline to setup */
+		NULL);
 	
 	/* Setup control points. */
-	spline.ctrlp[0] = -1.75;
-	spline.ctrlp[1] = -1.0;
-	spline.ctrlp[2] = 0.0;
-	spline.ctrlp[3] = -1.5;
-	spline.ctrlp[4] = -0.5;
-	spline.ctrlp[5] = 0.0;
-	spline.ctrlp[6] = -1.5;
-	spline.ctrlp[7] = 0.0;
-	spline.ctrlp[8] = 0.0;
-	spline.ctrlp[9] = -1.25;
-	spline.ctrlp[10] = 0.5;
-	spline.ctrlp[11] = 0.0;
-	spline.ctrlp[12] = -0.75;
-	spline.ctrlp[13] = 0.75;
-	spline.ctrlp[14] = 0.0;
-	spline.ctrlp[15] = 0.0;
-	spline.ctrlp[16] = 0.5;
-	spline.ctrlp[17] = 0.0;
-	spline.ctrlp[18] = 0.5;
-	spline.ctrlp[19] = 0.0;
-	spline.ctrlp[20] = 0.0;
+	ts_bspline_control_points(&spline, &ctrlp, NULL);
+	ctrlp[0]  = -1.75f;
+	ctrlp[1]  = -1.0f;
+	ctrlp[2]  =  0.0f;
+	ctrlp[3]  = -1.5f;
+	ctrlp[4]  = -0.5f;
+	ctrlp[5]  =  0.0f;
+	ctrlp[6]  = -1.5f;
+	ctrlp[7]  =  0.0f;
+	ctrlp[8]  =  0.0f;
+	ctrlp[9]  = -1.25f;
+	ctrlp[10] =  0.5f;
+	ctrlp[11] =  0.0f;
+	ctrlp[12] = -0.75f;
+	ctrlp[13] =  0.75f;
+	ctrlp[14] =  0.0f;
+	ctrlp[15] =  0.0f;
+	ctrlp[16] =  0.5f;
+	ctrlp[17] =  0.0f;
+	ctrlp[18] =  0.5f;
+	ctrlp[19] =  0.0f;
+	ctrlp[20] =  0.0f;
+	ts_bspline_set_control_points(&spline, ctrlp, NULL);
+	free(ctrlp);
 }
 
 void tear_down()
@@ -66,37 +72,49 @@ void tear_down()
 
 void display(void)
 {
-	tsBSpline draw;
 	size_t i;
+	tsBSpline draw;
+	tsReal *ctrlp_spline, *ctrlp_draw;
+	tsReal *knots_draw;
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	if (drawBeziers)
-		ts_bspline_to_beziers(&spline, &draw);
+		ts_bspline_to_beziers(&spline, &draw, NULL);
 	else
-		ts_bspline_copy(&spline, &draw);
+		ts_bspline_copy(&spline, &draw, NULL);
 
+	/* draw 'draw' */
+	ts_bspline_control_points(&draw, &ctrlp_draw, NULL);
+	ts_bspline_knots(&draw, &knots_draw, NULL);
 	glColor3f(1.0, 1.0, 1.0);
 	glLineWidth(3);
 	gluBeginCurve(theNurb);
 		gluNurbsCurve(
 			theNurb,
-			(GLint)draw.n_knots,
-			draw.knots,
-			(GLint)draw.dim,
-			draw.ctrlp,
-			(GLint)draw.order,
+			(GLint)ts_bspline_num_knots(&draw),
+			knots_draw,
+			(GLint)ts_bspline_dimension(&draw),
+			ctrlp_draw,
+			(GLint)ts_bspline_order(&draw),
 			GL_MAP1_VERTEX_3
 		);
 	gluEndCurve(theNurb);
 	ts_bspline_free(&draw);
 
 	/* draw control points */
+	ts_bspline_control_points(&spline, &ctrlp_spline, NULL);
 	glColor3f(1.0, 0.0, 0.0);
 	glPointSize(5.0);
 	glBegin(GL_POINTS);
-	  for (i = 0; i < spline.n_ctrlp; i++) 
-		 glVertex3fv(&spline.ctrlp[i * spline.dim]);
+	  for (i = 0; i < ts_bspline_num_control_points(&spline); i++)
+		 glVertex3fv(&ctrlp_spline[i * ts_bspline_dimension(&spline)]);
 	glEnd();
+
+	ts_bspline_free(&draw);
+	free(ctrlp_spline);
+	free(ctrlp_draw);
+	free(knots_draw);
 	
 	glutSwapBuffers();
 	glutPostRedisplay();
@@ -150,7 +168,7 @@ void reshape(int w, int h)
    gluPerspective (45.0, (GLdouble)w/(GLdouble)h, 3.0, 8.0);
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
-   glTranslatef (0.0, 0.0, -5.0);
+   glTranslatef (0.0f, 0.0f, -5.0f);
 }
 
 int main(int argc, char** argv)

@@ -5,15 +5,13 @@ import java.util.List;
 
 public class QuickStart {
 	public static void main(final String[] args) {
-		System.loadLibrary("tinysplinejava");
-
 		// Create a cubic spline with 7 control points in 2D using
 		// a clamped knot vector. This call is equivalent to:
 		// BSpline spline = new BSpline(7, 2, 3, BSplineType.CLAMPED);
 		final BSpline spline = new BSpline(7);
 
 		// Setup control points.
-		final List<Double> ctrlp = spline.getCtrlp();
+		final List<Double> ctrlp = spline.getControlPoints();
 		ctrlp.set(0, -1.75); // x0
 		ctrlp.set(1, -1.0);  // y0
 		ctrlp.set(2, -1.5);  // x1
@@ -28,10 +26,10 @@ public class QuickStart {
 		ctrlp.set(11, 0.5);  // y5
 		ctrlp.set(12, 0.5);  // x6
 		ctrlp.set(13, 0.0);  // y6
-		spline.setCtrlp(ctrlp);
+		spline.setControlPoints(ctrlp);
 
 		// Evaluate `spline` at u = 0.4.
-		List<Double> result = spline.evaluate(0.4).getResult();
+		List<Double> result = spline.eval(0.4).getResult();
 		System.out.printf("x = %f, y = %f%n",
 				result.get(0), result.get(1));
 
@@ -39,7 +37,7 @@ public class QuickStart {
 		final BSpline beziers = spline.derive().toBeziers();
 
 		// Evaluate `beziers` at u = 0.3.
-		result = beziers.evaluate(0.3).getResult();
+		result = beziers.eval(0.3).getResult();
 		System.out.printf("x = %f, y = %f%n",
 				result.get(0), result.get(1));
 	}

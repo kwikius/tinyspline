@@ -1,15 +1,25 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.12)
 project(tinyspline)
 
 # Turn on folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Exports TINYSPLINE_DEFINITIONS containing several preprocessor defines that
-# are required by the remaining modules
-add_subdirectory(src)
-add_definitions("${TINYSPLINE_DEFINITIONS}")
+option(TINYSPLINE_BUILD_EXAMPLES "Build TinySpline examples." ON)
+option(TINYSPLINE_BUILD_TESTS "Build TinySpline tests." ON)
+option(TINYSPLINE_BUILD_DOCS "Build TinySpline documentation." ON)
 
-add_subdirectory(examples)
-add_subdirectory(test)
-add_subdirectory(docs)
-add_subdirectory(tools)
+if(NOT DEFINED TINYSPLINE_OUTPUT_DIRECTORY)
+	set(TINYSPLINE_OUTPUT_DIRECTORY
+		${CMAKE_CURRENT_BINARY_DIR}/lib CACHE INTERNAL "")
+endif()
+add_subdirectory(src)
+if(TINYSPLINE_BUILD_EXAMPLES)
+	add_subdirectory(examples)
+endif()
+if(TINYSPLINE_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(test)
+endif()
+if(TINYSPLINE_BUILD_DOCS)
+	add_subdirectory(docs)
+endif()

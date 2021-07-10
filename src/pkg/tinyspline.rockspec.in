@@ -1,0 +1,33 @@
+package = "@TINYSPLINE_PACKAGE_NAME@@LUA_VERSION_MAJOR@@LUA_VERSION_MINOR@"
+version = "@TINYSPLINE_VERSION@-1"
+source = {
+	url = "@TINYSPLINE_URL@",
+}
+supported_platforms = {
+	"@TINYSPLINE_PLATFORM_NAME@"
+}
+description = {
+	summary = "@TINYSPLINE_SUMMARY@",
+	detailed = [[
+		@TINYSPLINE_DESCRIPTION@
+	]],
+	homepage = "@TINYSPLINE_URL@",
+	license = "@TINYSPLINE_LICENSE@"
+}
+dependencies = {
+	"lua ~> @LUA_VERSION_MAJOR@.@LUA_VERSION_MINOR@",
+}
+build = {
+	type = "command",
+	build_command = [[
+		@CMAKE_COMMAND@ --build . --target @TINYSPLINE_LUA_CMAKE_TARGET@ --config Release
+		@CMAKE_COMMAND@ -E echo 'function tinyspline_split(str, sep) local res = {} for s in string.gmatch(str, "([^"..sep.."]+)") do table.insert(res, s) end return res end' > tinyspline.lua
+		@CMAKE_COMMAND@ -E echo 'function tinyspline_major() return tinyspline_split(tinyspline_split(_VERSION, " ")[2], ".")[1] end' >> tinyspline.lua
+		@CMAKE_COMMAND@ -E echo 'function tinyspline_minor() return tinyspline_split(tinyspline_split(_VERSION, " ")[2], ".")[2] end' >> tinyspline.lua
+		@CMAKE_COMMAND@ -E echo 'return require("@TINYSPLINE_LUA_CMAKE_TARGET@"..tinyspline_major()..tinyspline_minor())' >> tinyspline.lua
+	]],
+	install = {
+		lua = { "tinyspline.lua" },
+		lib = { @TINYSPLINE_LUAROCKS_INSTALL_LIB@ }
+	}
+}

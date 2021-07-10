@@ -1,59 +1,51 @@
-#include "tinyspline.h"
+#include <tinyspline.h>
 #include "CuTest.h"
-#include "utils.h"
 
-void move_test_bspline_different_ptr(CuTest* tc)
+void move_test_bspline_different_ptr(CuTest *tc)
 {
-	tsBSpline spline, moved, control;
+	tsBSpline spline, moved;
 
-	ctests_init_non_default_bspline(&spline);
-	control.deg = spline.deg;
-	control.order = spline.order;
-	control.dim = spline.dim;
-	control.n_ctrlp = spline.n_ctrlp;
-	control.n_knots = spline.n_knots;
-	control.ctrlp = spline.ctrlp;
-	control.knots = spline.knots;
+/* ================================= Given ================================= */
+	ts_bspline_new(6, 3, 3, TS_OPENED, &spline, NULL);
+	CuAssertPtrNotNull(tc, spline.pImpl);
+	moved.pImpl = NULL;
 
+/* ================================= When ================================== */
 	ts_bspline_move(&spline, &moved);
-	ctests_assert_default_bspline(tc, &spline);
 
-	CuAssertIntEquals(tc, (int) control.deg, (int) moved.deg);
-	CuAssertIntEquals(tc, (int) control.order, (int) moved.order);
-	CuAssertIntEquals(tc, (int) control.dim, (int) moved.dim);
-	CuAssertIntEquals(tc, (int) control.n_ctrlp, (int) moved.n_ctrlp);
-	CuAssertIntEquals(tc, (int) control.n_knots, (int) moved.n_knots);
-	CuAssertPtrEquals(tc, control.ctrlp, moved.ctrlp);
-	CuAssertPtrEquals(tc, control.knots, moved.knots);
+/* ================================= Then ================================== */
+	CuAssertPtrEquals(tc, spline.pImpl, NULL);
+	CuAssertPtrNotNull(tc, moved.pImpl);
+
+	ts_bspline_free(&moved);
 }
 
-void move_test_bspline_same_ptr(CuTest* tc)
+void move_test_deboornet_different_ptr(CuTest *tc)
 {
-	tsBSpline move, control;
-	ctests_init_non_default_bspline(&move);
-	control.deg = move.deg;
-	control.order = move.order;
-	control.dim = move.dim;
-	control.n_ctrlp = move.n_ctrlp;
-	control.n_knots = move.n_knots;
-	control.ctrlp = move.ctrlp;
-	control.knots = move.knots;
-	ts_bspline_move(&move, &move);
-	CuAssertIntEquals(tc, (int) control.deg, (int) move.deg);
-	CuAssertIntEquals(tc, (int) control.order, (int) move.order);
-	CuAssertIntEquals(tc, (int) control.dim, (int) move.dim);
-	CuAssertIntEquals(tc, (int) control.n_ctrlp, (int) move.n_ctrlp);
-	CuAssertIntEquals(tc, (int) control.n_knots, (int) move.n_knots);
-	CuAssertPtrEquals(tc, control.ctrlp, move.ctrlp);
-	CuAssertPtrEquals(tc, control.knots, move.knots);
+	tsBSpline spline;
+	tsDeBoorNet net, moved;
+
+/* ================================= Given ================================= */
+	ts_bspline_new(6, 3, 3, TS_OPENED, &spline, NULL);
+	net.pImpl = moved.pImpl = NULL;
+	ts_bspline_eval(&spline, 0.5f, &net, NULL);
+	CuAssertPtrNotNull(tc, net.pImpl);
+
+/* ================================= When ================================== */
+	ts_deboornet_move(&net, &moved);
+
+/* ================================= Then ================================== */
+	CuAssertPtrEquals(tc, net.pImpl, NULL);
+	CuAssertPtrNotNull(tc, moved.pImpl);
+
+	ts_bspline_free(&spline);
+	ts_deboornet_free(&moved);
 }
 
 CuSuite* get_move_suite()
 {
 	CuSuite* suite = CuSuiteNew();
-
 	SUITE_ADD_TEST(suite, move_test_bspline_different_ptr);
-	SUITE_ADD_TEST(suite, move_test_bspline_same_ptr);
-
+	SUITE_ADD_TEST(suite, move_test_deboornet_different_ptr);
 	return suite;
 }
